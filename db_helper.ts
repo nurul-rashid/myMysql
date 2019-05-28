@@ -191,11 +191,15 @@ export class DbHelper{
 
         const conn = await this.getConnection();
 
-        return conn.execute(this.query, this.data, this.getResult);
+        const result = await conn.execute(this.query, this.data, this.getResult);
+
+        this.closeConnection();
+
+        return result;
     }
 
     closeConnection = () => {
-        if (this.isEmpty(this.connection)) this.connection.end();
+        if (!this.isEmpty(this.connection)) this.connection.end();
     }
 
     // Prepare helper functions

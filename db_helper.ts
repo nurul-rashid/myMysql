@@ -1,4 +1,4 @@
-import * as mysql from "mysql2";
+import * as mysql from "mysql2/promise";
 
 interface ISettings {
     host: string,
@@ -50,29 +50,29 @@ export class DbHelper{
         return this;
     }
 
-    private setPool = () => {
+    private setPool = async () => {
         if(this.isEmpty(this.pool)){
-            this.pool = mysql.createPool(this.poolSettings);
+            this.pool = await mysql.createPool(this.poolSettings);
         }
     }
 
-    getPool = () => {
+    getPool = async () => {
         if(this.isEmpty(this.pool)){
-            this.setPool();
+            await this.setPool();
         }
 
         return this.pool;
     }
 
-    private setConnection = () => {
+    private setConnection = async () => {
         if(this.isEmpty(this.connection)){
-            this.connection = mysql.createConnection(this.settings);
+            this.connection = await mysql.createConnection(this.settings);
         }
     }
 
-    getConnection = () => {
+    getConnection = async () => {
         if(this.isEmpty(this.connection)){
-            this.setConnection();
+            await this.setConnection();
         }
 
         return this.connection;
@@ -80,11 +80,11 @@ export class DbHelper{
 
     // methods
     select = (...columnNames: string[]) => {
-        columnNames.forEach((columnName) => {
+        for(const columnName of columnNames) {
             if(!this.isEmpty(columnName)){
                 this.storeSelect.push(this.addBackticksAroundColumnNames(columnName))
             }
-        })
+        }
 
         return this;
     }
@@ -157,11 +157,11 @@ export class DbHelper{
     }
 
     groupBy = (...columnNames:string[]) => {
-        columnNames.forEach((columnName) => {
+        for(const columnName of columnNames) {
             if(!this.isEmpty(columnName)){
                 this.storeGroupBy.push(this.addBackticksAroundColumnNames(columnName))
             }
-        })
+        }
 
         return this;
     }
@@ -189,14 +189,9 @@ export class DbHelper{
     get = async (tableName?:string) => {
         this.buildSelect();
 
-        return await this.getConnection().execute(this.query, this.data, (err, rows) => {
-            if(err) throw new Error(err);
-    
-            console.log(rows);
-            this.closeConnection();
-    
-            return rows;
-        });
+        const conn = await this.getConnection();
+
+        return conn.execute(this.query, this.data, this.getResult);
     }
 
     closeConnection = () => {
@@ -242,9 +237,6 @@ export class DbHelper{
 
     private getResult = (err, rows) => {
         if(err) throw new Error('sup');
-
-        console.log(rows);
-        this.closeConnection();
 
         return rows;
     }
